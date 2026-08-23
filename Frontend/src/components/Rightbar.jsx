@@ -1,154 +1,119 @@
-import React, { useEffect, useState } from "react";
-import { CgProfile } from "react-icons/cg";
+import { useEffect, useState } from "react";
 import { ImCross } from "react-icons/im";
+import { useNavigate } from "react-router-dom";
+import { api } from "../api";
+import { useSocket } from "../context/SocketContext";
+
 const Rightbar = ({ isrightsidebaropen, setisrightsidebaropen }) => {
+  const [requests, setRequests] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [friends, setFriends] = useState([]);
+  const { onlineIds } = useSocket() || { onlineIds: new Set() };
+  const navigate = useNavigate();
+
+  const load = async () => {
+    try {
+      const [reqData, notifData, friendData] = await Promise.all([
+        api("/friends/requests"),
+        api("/users/notifications"),
+        api("/friends"),
+      ]);
+      setRequests(reqData.requests);
+      setNotifications(notifData.notifications);
+      setFriends(friendData.friends);
+    } catch {
+      /* not signed in */
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
   useEffect(() => {
     const checkScreenSize = () => {
-      if (window.innerWidth >= 768) {
-        setisrightsidebaropen(true);
-      } else {
-        setisrightsidebaropen(false);
-      }
+      if (!setisrightsidebaropen) return;
+      setisrightsidebaropen(window.innerWidth >= 768);
     };
-
     checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
     return () => window.removeEventListener("resize", checkScreenSize);
   }, [setisrightsidebaropen]);
 
-  const [showparagraph, setshowparagraph] = useState(false);
-  const [showparagraph1, setshowparagraph1] = useState(false);
-  const [paragraph, setparagraph] = useState("");
-  const [paragraph1, setparagraph1] = useState("");
+  const respond = async (id, action) => {
+    await api(`/friends/requests/${id}`, {
+      method: "POST",
+      body: JSON.stringify({ action }),
+    });
+    load();
+  };
 
-  const handleaccept = () => {
-    setshowparagraph(true);
-    setparagraph("You have accepted the friend request");
-  };
-  const handlereject = () => {
-    setshowparagraph(true);
-    setparagraph("You have rejected the friend request");
-  };
-  const handleaccept1 = () => {
-    setshowparagraph1(true);
-    setparagraph1("You have accepted the friend request");
-  };
-  const handlereject1 = () => {
-    setshowparagraph1(true);
-    setparagraph1("You have rejected the friend request");
-  };
   return (
     <div
-      className={`${isrightsidebaropen ? 'w-[80%] md:w-[35%] lg:w-[30%]' : 'w-0'} h-screen fixed right-0 top-0 mt-22 overflow-hidden border-l-[1px] bg-gray-300 text-50 flex-row transition-all duration-300`}
+      className={`${
+        isrightsidebaropen ? "w-[80%] md:w-[32%] lg:w-[24%]" : "w-0"
+      } h-[calc(100vh-4rem)] fixed right-0 top-16 overflow-y-auto border-l bg-gray-100 transition-all duration-300 z-40`}
     >
-      <div className="flex text-xl items-center md:hidden flex-row-reverse pt-1 pr-5">
+      <div className="flex md:hidden justify-end pt-2 pr-5">
         <ImCross
-          onClick={() => setisrightsidebaropen(false)}
+          onClick={() => setisrightsidebaropen?.(false)}
           className="text-red-500 cursor-pointer"
         />
       </div>
-      <div className="bg-white shadow-2xl">
-        <p> Friend Request</p>
-        <div className="flex w-fit items-center">
-          {showparagraph ? (
-            <p>{paragraph}</p>
-          ) : (
-            <>
-              <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-              <h1 className="font-bold cursor-pointer"> Ram K.c </h1>
+      <div className="p-3 space-y-4">
+        <section className="bg-white rounded-xl p-3 shadow-sm">
+          <p className="font-semibold mb-2">Friend requests</p>
+          {requests.length === 0 && <p className="text-sm text-gray-500">No pending requests.</p>}
+          {requests.map((item) => (
+            <div key={item.id} className="flex items-center gap-2 mb-2">
               <button
-                onClick={handleaccept}
-                className="bg-blue-500 cursor-pointer px-1 ml-[50px] w-fit rounded-sm border-[1px] text-white"
+                className="font-medium text-left flex-1"
+                onClick={() => navigate(`/profile/${item.user.id}`)}
+              >
+                {item.user.username}
+              </button>
+              <button
+                onClick={() => respond(item.id, "accept")}
+                className="bg-blue-500 text-white text-sm px-2 py-1 rounded"
               >
                 Accept
               </button>
               <button
-                onClick={handlereject}
-                className="cursor-pointer bg-red-500 ml-2 px-1 w-fit rounded-sm border-[1px] text-white"
+                onClick={() => respond(item.id, "reject")}
+                className="bg-red-500 text-white text-sm px-2 py-1 rounded"
               >
                 Decline
               </button>
-            </>
-          )}
-        </div>
-        <div className="flex items-center">
-          {showparagraph1 ? (
-            <p>{paragraph1}</p>
-          ) : (
-            <>
-              <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-              <h1 className="font-bold cursor-pointer"> Shyam Maharjan </h1>
-              <div></div>
-              <button
-                onClick={handleaccept1}
-                className=" cursor-pointer bg-blue-500 px-1 ml-[50px] w-fit rounded-sm border-[1px] text-white"
-              >
-                Accept
-              </button>
-              <button
-                onClick={handlereject1}
-                className="cursor-pointer bg-red-500 px-1 ml-2 w-fit rounded-sm border-[1px] text-white"
-              >
-                Decline
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-      <div className="bg-white shadow-2xl mt-4">
-        <p> Latest Events</p>
-        <div className="flex w-fit">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer">Crystal K.c</h1> &nbsp;
-          <p> has posted a new photo. </p>
-        </div>
-        <div className="flex w-fit items-center">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer"> Shiva Kumar </h1> &nbsp;
-          <p> liked your post. </p>
-        </div>
-        <div className="flex w-fit items-center">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer">Zuna Rai </h1> &nbsp;
-          <p> replied to your comment. </p>
-        </div>
-        <div className="flex w-fit items-center">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer"> Mahesh Basnet </h1> &nbsp;
-          <p> invited you to a group. </p>
-        </div>
-      </div>
-      <div className="bg-white shadow-2xl mt-4">
-        <p> Friends online</p>
-        <div className="flex w-fit items-center">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer"> Rama K.c </h1> &nbsp;
-        </div>
-        <div className="flex w-fit items-center">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer"> Prabesh Paudel </h1> &nbsp;
-        </div>
-        <div className="flex w-fit items-center">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer"> Shraddha Bhattrai </h1>{" "}
-          &nbsp;
-        </div>
-        <div className="flex w-fit items-center">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer"> Aaarogya Mahat </h1> &nbsp;
-        </div>
-        <div className="flex w-fit items-center">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer"> Sunil Sharma </h1> &nbsp;
-        </div>
-        <div className="flex w-fit items-center">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer"> Mahesh Basnet </h1> &nbsp;
-        </div>
-        <div className="flex w-fit items-center">
-          <CgProfile className="text-blue-400 cursor-pointer mx-2 text-xl sm:text-2xl bold my-2" />
-          <h1 className="font-bold cursor-pointer "> Zuna Rai </h1> &nbsp;
-        </div>
+            </div>
+          ))}
+        </section>
+        <section className="bg-white rounded-xl p-3 shadow-sm">
+          <p className="font-semibold mb-2">Notifications</p>
+          {notifications.length === 0 && <p className="text-sm text-gray-500">Nothing new.</p>}
+          {notifications.slice(0, 8).map((item) => (
+            <p key={item.id} className="text-sm mb-2 text-gray-700">
+              {item.message}
+            </p>
+          ))}
+        </section>
+        <section className="bg-white rounded-xl p-3 shadow-sm">
+          <p className="font-semibold mb-2">Friends</p>
+          {friends.length === 0 && <p className="text-sm text-gray-500">Add friends to chat and call.</p>}
+          {friends.map((friend) => (
+            <button
+              key={friend.id}
+              onClick={() => navigate(`/chat/${friend.id}`)}
+              className="flex w-full items-center gap-2 py-1"
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  onlineIds.has(friend.id) ? "bg-green-500" : "bg-gray-300"
+                }`}
+              />
+              <span>{friend.username}</span>
+            </button>
+          ))}
+        </section>
       </div>
     </div>
   );

@@ -1,41 +1,32 @@
-import React, { useState, useEffect } from "react";
-import FeedCard from "./FeedCard"; 
-import CreatePost from "./CreatePost"; 
-import dummyPosts from "../data/posts";
+import { useEffect, useState } from "react";
+import FeedCard from "./FeedCard";
+import CreatePost from "./CreatePost";
+import { api } from "../api";
 
 const Feed = () => {
+  const [posts, setPosts] = useState([]);
+  const [error, setError] = useState("");
 
-  const [posts, setPosts] = useState(() => {
-    const savedPosts = localStorage.getItem("posts");
-
-    if (!savedPosts) return dummyPosts;
-
-    const parsed = JSON.parse(savedPosts);
-
-    if (Date.now() > parsed.expiry) {
-      localStorage.removeItem("posts");
-      return dummyPosts;
+  const load = async () => {
+    try {
+      const data = await api("/posts");
+      setPosts(data.posts);
+    } catch (err) {
+      setError(err.message);
     }
-
-    return parsed.data;
-  });
-
-  useEffect(() => {
-    const dataToStore = {
-      data: posts,
-      expiry: Date.now() + 60 * 60 * 1000, 
-    };
-
-    localStorage.setItem("posts", JSON.stringify(dataToStore));
-  }, [posts]);
-
-  const addPost = (newPost) => {
-    setPosts((prev) => [newPost, ...prev]);
   };
 
+  useEffect(() => {
+    load();
+  }, []);
+
   return (
-    <div className="flex-1 mt-3 px-4">
-      <CreatePost addPost={addPost} />
+    <div className="flex-1 px-2">
+      <CreatePost onCreated={(post) => setPosts((prev) => [post, ...prev])} />
+      {error && <p className="text-center text-red-500">{error}</p>}
+      {posts.length === 0 && !error && (
+        <p className="text-center text-gray-500 mt-8">No posts yet. Be the first to share something.</p>
+      )}
       {posts.map((post) => (
         <FeedCard key={post.id} post={post} />
       ))}
