@@ -1,109 +1,75 @@
-import React, { useEffect } from 'react'
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { CgProfile } from "react-icons/cg";
 import { FaUserFriends } from "react-icons/fa";
-import { HiMiniUserGroup } from "react-icons/hi2";
-import { CiShop } from "react-icons/ci";
-import { FaStopwatch } from "react-icons/fa";
-import { MdEventAvailable } from "react-icons/md";
-import { IoGameController } from "react-icons/io5";
-import { IoMdPhotos } from "react-icons/io";
+import { BsChatDots } from "react-icons/bs";
 import { CiVideoOn } from "react-icons/ci";
-import { RiRefund2Fill } from "react-icons/ri"
-import { MdOutlineHelpOutline } from "react-icons/md";
 import { IoMdSettings } from "react-icons/io";
+import { MdOutlineHelpOutline } from "react-icons/md";
 import { ImCross } from "react-icons/im";
+import { useAuth } from "../context/AuthContext";
 
-const Leftbar = ({isleftsidebaropen, setislogoutclicked, setisleftsidebaropen}) => {
+const Item = ({ to, icon, label }) => (
+  <Link to={to} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-100 rounded-lg">
+    {icon}
+    <span>{label}</span>
+  </Link>
+);
+
+const Leftbar = ({
+  isleftsidebaropen,
+  setislogoutclicked,
+  setisleftsidebaropen,
+}) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   useEffect(() => {
     const checkScreenSize = () => {
-      if (window.innerWidth >= 768) {
-        setisleftsidebaropen(true);
-      } else {
-        setisleftsidebaropen(false);
-      }
+      if (!setisleftsidebaropen) return;
+      setisleftsidebaropen(window.innerWidth >= 768);
     };
-
-    checkScreenSize(); 
+    checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
-
     return () => window.removeEventListener("resize", checkScreenSize);
-  },[setisleftsidebaropen]);
+  }, [setisleftsidebaropen]);
 
   return (
     <div
-      className={`h-screen fixed left-0 top-0 mt-20 overflow-hidden ${
-        isleftsidebaropen ? 'w-[80%] md:w-[25%]' : 'w-0'
-      } border-r-[1px] bg-white text-50 flex-row transition-all duration-300`}
+      className={`h-[calc(100vh-4rem)] fixed left-0 top-16 overflow-y-auto ${
+        isleftsidebaropen ? "w-[80%] md:w-[25%] lg:w-[22%]" : "w-0"
+      } border-r bg-white transition-all duration-300 z-40`}
     >
-      <div className='flex text-xl sm:hidden flex-row-reverse pt-2 pr-5'>
+      <div className="flex sm:hidden justify-end pt-2 pr-5">
         <ImCross
-          onClick={() => setisleftsidebaropen(false)}
-          className='text-red-500 cursor-pointer'
+          onClick={() => setisleftsidebaropen?.(false)}
+          className="text-red-500 cursor-pointer"
         />
       </div>
-
-      <div className='flex items-center'>
-        <CgProfile className='text-blue-400 text-xl sm:text-2xl bold my-2' />
-        <h1> Sakshyam Budhathoki </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <FaUserFriends className='text-cyan-300 text-xl sm:text-2xl bold my-2' />
-        <h1> Friends </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <HiMiniUserGroup className='text-red-200 text-xl sm:text-2xl bold my-2' />
-        <h1> Groups </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <CiShop className='text-purple-400 text-xl sm:text-2xl bold my-2' />
-        <h1> Marketplace </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <FaStopwatch className='text-blue-400 text-xl sm:text-2xl bold my-2' />
-        <h1> Memories </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <MdEventAvailable className='text-purple-400 text-xl sm:text-2xl bold my-2' />
-        <h1> Events </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <IoGameController className='text-amber-950 text-xl sm:text-2xl bold my-2' />
-        <h1> Gaming </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <IoMdPhotos className='text-pink-400 text-xl sm:text-2xl bold my-2' />
-        <h1> Gallery </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <CiVideoOn className='text-pink-300 text-xl sm:text-2xl bold my-2' />
-        <h1> Videos </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <MdOutlineHelpOutline className='text-amber-300 text-xl sm:text-2xl bold my-2' />
-        <h1> Help and Support </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <IoMdSettings className='text-amber-300 text-xl sm:text-2xl bold my-2' />
-        <h1> Settings </h1>
-      </div>
-
-      <div className='flex items-center'>
-        <RiRefund2Fill className='text-green-300 text-xl sm:text-2xl bold my-2' />
-        <h1> Fundraisers </h1>
-      </div>
-
-      <div className='w-full flex justify-center items-center'>
-        <button onClick={()=> setislogoutclicked(true)} className='shadow-2xl bg-gray-200 w-full border-[1px] text-xl sm:text-2xl cursor-pointer'>
+      <div className="p-3 space-y-1">
+        <button
+          onClick={() => user && navigate(`/profile/${user.id}`)}
+          className="flex items-center gap-3 px-3 py-2 w-full text-left hover:bg-gray-100 rounded-lg"
+        >
+          {user?.avatar ? (
+            <img src={user.avatar} alt="" className="w-7 h-7 rounded-full object-cover" />
+          ) : (
+            <CgProfile className="text-blue-400 text-2xl" />
+          )}
+          <span className="font-medium">{user?.username || "Guest"}</span>
+        </button>
+        <Item to="/friends" icon={<FaUserFriends className="text-cyan-500 text-2xl" />} label="Friends" />
+        <Item to="/chat" icon={<BsChatDots className="text-blue-500 text-2xl" />} label="Messenger" />
+        <Item to="/friends" icon={<CiVideoOn className="text-pink-400 text-2xl" />} label="Video call" />
+        <Item to={`/profile/${user?.id || ""}`} icon={<IoMdSettings className="text-amber-500 text-2xl" />} label="Profile settings" />
+        <div className="flex items-center gap-3 px-3 py-2 text-gray-500">
+          <MdOutlineHelpOutline className="text-amber-300 text-2xl" />
+          <span>Help and Support</span>
+        </div>
+        <button
+          onClick={() => setislogoutclicked?.(true)}
+          className="mt-4 w-full bg-gray-100 border rounded-lg py-2 hover:bg-gray-200"
+        >
           Log Out
         </button>
       </div>

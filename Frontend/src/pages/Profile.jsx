@@ -1,19 +1,10 @@
-import React from 'react'
-import Navbar from '../components/Navbar'
-import Leftbar from '../components/Leftbar'
-import Userprofile from '../components/Userprofile'
-import Rightbar from '../components/Rightbar'
-const Profile = () => {
-  return (
-    <div>
-      <Navbar/>
-      <div className='flex'>
-        <Leftbar/>
-        <Userprofile/>
-        <Rightbar/>
-        </div>
-    </div>
-  )
-}
+import Layout from "../components/Layout";
+import Userprofile from "../components/Userprofile";
 
-export default Profile
+const Profile = () => (
+  <Layout>
+    <Userprofile />
+  </Layout>
+);
+
+export default Profile;
