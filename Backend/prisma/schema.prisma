@@ -7,33 +7,15 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum FriendshipStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-}
-
 model User {
-  id            String   @id @default(uuid())
-  username      String   @unique
-  email         String   @unique
-  password      String?
-  googleId      String?  @unique
-  phone         String?
-  bio           String?
-  avatar        String?
-  coverPicture  String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  posts                     Post[]
-  likes                     Like[]
-  comments                  Comment[]
-  sentFriendships           Friendship[]               @relation("Requester")
-  receivedFriendships       Friendship[]               @relation("Addressee")
-  sentMessages              Message[]
-  conversationParticipants  ConversationParticipant[]
-  notifications             Notification[]
+  id               String   @id @default(uuid())
+  username         String   @unique 
+  email            String   @unique
+  password         String?
+  profilePicture   String?
+  coverPicture     String?
+  createdAt        DateTime @default(now())
+  posts            Post[]
 }
 
 model Post {
@@ -41,91 +23,71 @@ model Post {
   caption   String?
   imageUrl  String?
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  likes     Like[]
-  comments  Comment[]
+  author    User
   createdAt DateTime @default(now())
-
-  @@index([authorId])
-  @@index([createdAt])
-}
-
-model Like {
-  id        String   @id @default(uuid())
-  userId    String
-  postId    String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, postId])
+  updatedAt DateTime @updatedAt
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  text      String
-  userId    String
-  postId    String
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@index([postId])
+  id              String   @id @default(uuid())
+  commentedText   String
+  commenterId     String
+  commenter       User
+  postId          String
+  post            Post
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
-model Friendship {
-  id          String            @id @default(uuid())
-  requesterId String
-  addresseeId String
-  status      FriendshipStatus  @default(PENDING)
-  createdAt   DateTime          @default(now())
-  requester   User              @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
-  addressee   User              @relation("Addressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+model Like {
+  id           String   @id @default(uuid())
+  likedById    String
+  likedBy      User
+  postId       String
+  post         Post
+  likedAt      DateTime @default(now())
+}
 
-  @@unique([requesterId, addresseeId])
-  @@index([addresseeId, status])
+model FriendRequest {
+  id            String     @id @default(uuid())
+  requesterId   String
+  requester     User
+  recieverId    String
+  reciever      User
+  status        String
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
 
 model Conversation {
-  id           String                     @id @default(uuid())
-  createdAt    DateTime                   @default(now())
-  updatedAt    DateTime                   @updatedAt
-  participants ConversationParticipant[]
-  messages     Message[]
+  id          String       @id @default(uuid())
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
-model ConversationParticipant {
+model ConversationParticipants {
   id             String       @id @default(uuid())
   conversationId String
-  userId         String
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([conversationId, userId])
+  conversation   Conversation
+  joinedAt       DateTime     @default(now())
+  leftAt         DateTime?
 }
 
 model Message {
-  id             String       @id @default(uuid())
-  conversationId String
-  senderId       String
-  content        String
-  imageUrl       String?
-  createdAt      DateTime     @default(now())
-  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
-
-  @@index([conversationId, createdAt])
+  id              String      @id @default(uuid())
+  text            String     
+  conversationId  String
+  conversation    Conversation
+  senderId        String
+  recieverId      String
+  sendAt          DateTime    @default(now())
+  editedAt        DateTime    @updatedAt
 }
 
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String
-  type      String
-  message   String
-  link      String?
-  isRead    Boolean  @default(false)
+  id                String    @id @default(uuid())
+  message           String
+  recieverId    String
+  reciever      User         
   createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isRead])
 }
