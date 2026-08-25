@@ -7,15 +7,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum GenderChoice {
+  Male
+  Female
+  Others
+}
+
 model User {
   id               String   @id @default(uuid())
   username         String   @unique 
   email            String   @unique
   password         String?
+  dateofBirth      DateTime
+  gender           GenderChoice
   profilePicture   String?
   coverPicture     String?
   createdAt        DateTime @default(now())
   posts            Post[]
+  comments         Comment[]
+  likes            Like[]
+  sentRequests      FriendRequest[] @relation("SentRequests")
+  recievedRequests  FriendRequest[] @relation("RecievedRequests")
+  sentMessages      Message[] @relation("SentMessage")
+  recievedMessages  Message[] @relation("RecievedMessage")
+  notifications    Notification[]
+  conversation     ConversationParticipants[]
 }
 
 model Post {
@@ -23,63 +45,71 @@ model Post {
   caption   String?
   imageUrl  String?
   authorId  String
-  author    User
+  author    User     @relation( fields:[authorId], references:[id] )
+  likes     Like[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  comments   Comment[]
 }
 
 model Comment {
   id              String   @id @default(uuid())
   commentedText   String
   commenterId     String
-  commenter       User
+  commenter       User     @relation( fields:[commenterId], references:[id] )
   postId          String
-  post            Post
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  post            Post     @relation( fields:[postId], references:[id] )
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 }
 
 model Like {
   id           String   @id @default(uuid())
   likedById    String
-  likedBy      User
+  likedBy      User     @relation( fields:[likedById], references: [id])
   postId       String
-  post         Post
+  post         Post     @relation( fields:[postId], references: [id])
   likedAt      DateTime @default(now())
 }
 
 model FriendRequest {
   id            String     @id @default(uuid())
   requesterId   String
-  requester     User
+  requester     User       @relation("SentRequests", fields:[requesterId], references:[id])
   recieverId    String
-  reciever      User
-  status        String
+  reciever      User       @relation("RecievedRequests", fields:[recieverId], references:[id])
+  status        FriendRequestStatus    @default(PENDING)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 }
 
 model Conversation {
-  id          String       @id @default(uuid())
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id           String       @id @default(uuid())
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  participants ConversationParticipants[]
+  messages     Message[]
 }
 
 model ConversationParticipants {
   id             String       @id @default(uuid())
   conversationId String
-  conversation   Conversation
+  conversation   Conversation @relation(fields:[conversationId], references:[id])
+  userId         String
+  user           User         @relation(fields:[userId], references:[id])
   joinedAt       DateTime     @default(now())
   leftAt         DateTime?
 }
 
 model Message {
-  id              String      @id @default(uuid())
+  id              String       @id @default(uuid())
   text            String     
   conversationId  String
-  conversation    Conversation
+  conversation    Conversation @relation(fields:[conversationId], references:[id])
   senderId        String
+  sender          User         @relation("SentMessage", fields:[senderId], references:[id])
   recieverId      String
+  reiever         User         @relation("RecievedMessage", fields:[recieverId], references:[id])
   sendAt          DateTime    @default(now())
   editedAt        DateTime    @updatedAt
 }
@@ -87,7 +117,7 @@ model Message {
 model Notification {
   id                String    @id @default(uuid())
   message           String
-  recieverId    String
-  reciever      User         
-  createdAt DateTime @default(now())
+  recieverId        String
+  reciever          User      @relation(fields:[recieverId], references:[id])       
+  createdAt         DateTime  @default(now())
 }

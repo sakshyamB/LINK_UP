@@ -11,7 +11,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "SocialApp API with Prisma, OAuth, Socket.io, and Cloudinary",
+  "description": "SocialApp",
   "dependencies": {
     "@prisma/client": "^6.14.0",
     "bcrypt": "^6.0.0",
