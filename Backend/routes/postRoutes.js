@@ -1,19 +1,11 @@
 const express = require("express");
-const multer = require("multer");
 const postController = require("../controllers/postController");
-const { auth, optionalAuth } = require("../middleware/auth");
+const authMiddleware = require("../middleware/authMiddleware")
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024 },
-});
+const postRoutes = express.Router();
 
-const router = express.Router();
+postRoutes.post("/create", authMiddleware, postController.createPost);
+postRoutes.get("/user/:id", authMiddleware, postController.getPost);
+postRoutes.get("/all", authMiddleware, postController.getAllPost);
 
-router.get("/", optionalAuth, postController.listPosts);
-router.post("/", auth, upload.single("image"), postController.createPost);
-router.post("/:id/like", auth, postController.toggleLike);
-router.post("/:id/comments", auth, postController.addComment);
-router.get("/user/:userId", optionalAuth, postController.userPosts);
-
-module.exports = router;
+module.exports = postRoutes;

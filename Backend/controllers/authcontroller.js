@@ -47,7 +47,7 @@ body("gender")
   .isIn(["male", "female", "other"])
   .withMessage("Invalid gender selected"),
 
-  async (req, res, next) => {
+  async (req, res) => {
     console.log(req.body);
 
     const errors = validationResult(req);
@@ -75,7 +75,16 @@ body("gender")
   }
 ];
 
-exports.PostLogin = async (req, res, next) => {
+exports.PostLogin =[ 
+  body("email")
+  .notEmpty()
+  .message("Email is required"),
+  
+  body("password")
+  .notEmpty()
+  .message("Password is required"),
+
+  async (req, res) => {
   const { email, password } = req.body;
   const user = await prisma.user.findUnique({
   where: {
@@ -108,4 +117,4 @@ exports.PostLogin = async (req, res, next) => {
       email: user.email,
     },
   });
-};
+}];
