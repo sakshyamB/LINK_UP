@@ -2,6 +2,9 @@ const express = require("express");
 const cors = require("cors");
 const prisma = require("./db/db");
 const dotenv = require("dotenv");
+const authRoutes = require("./routes/authRoutes");
+const profileRoutes = require("./routes/profileRoutes");
+const postRoutes = require("./routes/postRoutes")
 
 dotenv.config();
 
@@ -14,6 +17,9 @@ app.use(
 );
 
 app.use(express.json());
+app.use('/auth', authRoutes);
+app.use('/profile', profileRoutes);
+app.use('/post', postRoutes);
 
 const PORT = process.env.PORT || 3001;
 
