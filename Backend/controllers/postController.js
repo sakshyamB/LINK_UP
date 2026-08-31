@@ -28,6 +28,11 @@ exports.getPost = async (req, res) => {
       profilePicture: true,
           },
         },
+     _count: {
+     select: {
+     likes: true,
+    comments: true,
+      },}
       },
     });
     return res.status(200).json({ message: "Users Post are fetched successfully", userPost });
@@ -47,6 +52,11 @@ exports.getAllpost = async (req,res)=>{
       profilePicture: true,
           },
         },
+      _count: {
+      select: {
+     likes: true,
+      comments: true,
+      },}
       },
     orderBy: {
   createdAt: "desc"
