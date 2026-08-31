@@ -4,7 +4,10 @@ const prisma = require("./db/db");
 const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
-const postRoutes = require("./routes/postRoutes")
+const postRoutes = require("./routes/postRoutes");
+const commentRoutes = require("./routes/commentRoutes");
+const likeRoutes = require("./routes/likeRoutes");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 dotenv.config();
 
@@ -20,6 +23,9 @@ app.use(express.json());
 app.use('/auth', authRoutes);
 app.use('/profile', profileRoutes);
 app.use('/post', postRoutes);
+app.use('/comment', commentRoutes);
+app.use('/like', likeRoutes);
+app.use('/notification', notificationRoutes);
 
 const PORT = process.env.PORT || 3001;
 
