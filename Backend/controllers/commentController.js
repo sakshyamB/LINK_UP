@@ -2,6 +2,15 @@ const prisma = require("../db/db");
 
 exports.createComment = async (req, res) => {
   try {
+    const post = await prisma.post.findUnique({
+      where: {
+        id: req.params.postId,
+      },
+    });
+    if (!post) {
+      return res.status(404).json({ message: "The post doesn't exist." });
+    }
+
     const Addedcomment = await prisma.comment.create({
       data: {
         commentedText: req.body.commentedText,
@@ -9,13 +18,14 @@ exports.createComment = async (req, res) => {
         commenterId: req.user.id,
       },
     });
-
+      
+    if(post.authorId !== req.user.id){
     const notification = await prisma.notification.create({
     data: {
     recieverId : post.authorId,
     message: "Someone commented on your post.",
     },
-  });
+  });}
 
    return res.status(201).json({ message: "Comment created successfully", Addedcomment });
   } catch (error) {

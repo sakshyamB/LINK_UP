@@ -40,12 +40,14 @@ exports.togglelikes = async (req, res) => {
       },
     });
 
-    const notification = await prisma.notification.create({
-    data: {
-      recieverId : post.authorId,
+     if (post.authorId !== userId) {
+      await prisma.notification.create({
+       data: {
+      recieverId: post.authorId,
       message: "Someone liked your post.",
     },
   });
+}  
 
     return res.status(201).json({message: "Post liked successfully.",liked: true,like,});
   } catch (error) {
@@ -69,7 +71,7 @@ exports.getlikes = async(req,res) =>{
           },
         },
         orderBy:{
-            createdAt : "desc"
+            likedAt : "desc"
         }
 })
 return res.status(200).json({message: "The likes on the post are fetched.", likesonpost })

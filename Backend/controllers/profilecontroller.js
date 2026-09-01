@@ -33,124 +33,171 @@ exports.Myprofile = async (req, res) => {
 exports.UserProfile = async (req, res) => {
   try {
     const userId = req.params.id;
+   const page = Math.max(1, parseInt(req.query.page) || 1);
+   const limit = Math.min(Math.max(1, parseInt(req.query.limit) || 10), 10);
+   const skip = (page - 1) * limit;
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
+   const friendship = await prisma.friendRequest.findFirst({
+     where: {
+       OR: [
+         {
+           requesterId: req.user.id,
+           recieverId: userId,
+         },
+         {
+           requesterId: userId,
+           recieverId: req.user.id,
+         },
+       ],
+     },
+   });
 
-      select: {
-        id: true,
-        username: true,
-        profilePicture: true,
-        coverPicture: true,
-        dateofBirth: true,
-        gender: true,
-        createdAt: true,
+   let friendStatus = "NONE";
 
-        posts: {
-          orderBy: {
-            createdAt: "desc",
-          },
+   if (friendship) {
+     if (friendship.status === "ACCEPTED") {
+       friendStatus = "FRIENDS";
+     } else if (friendship.status === "PENDING") {
+       if (friendship.requesterId === req.user.id) {
+         friendStatus = "PENDING_SENT";
+       } else {
+         friendStatus = "PENDING_RECEIVED";
+       }
+     }
+   }
 
-          select: {
-            id: true,
-            caption: true,
-            imageUrl: true,
-            createdAt: true,
-            updatedAt: true,
+   const user = await prisma.user.findUnique({
+     where: {
+       id: userId,
+     },
 
-            _count: {
-              select: {
-                likes: true,
-                comments: true,
-              },
-            },
-          },
-        },
+     select: {
+       id: true,
+       username: true,
+       profilePicture: true,
+       coverPicture: true,
+       dateofBirth: true,
+       gender: true,
+       createdAt: true,
 
-        sentRequests: {
-          where: {
-            status: "ACCEPTED",
-          },
+       posts: {
+         orderBy: {
+           createdAt: "desc",
+         },
+         skip,
+         take: limit,
 
-          select: {
-            id: true,
+         select: {
+           id: true,
+           caption: true,
+           imageUrl: true,
+           createdAt: true,
+           updatedAt: true,
 
-            reciever: {
-              select: {
-                id: true,
-                username: true,
-                profilePicture: true,
-              },
-            },
-          },
-        },
+           _count: {
+             select: {
+               likes: true,
+               comments: true,
+             },
+           },
+         },
+       },
 
-        recievedRequests: {
-          where: {
-            status: "ACCEPTED",
-          },
+       sentRequests: {
+         where: {
+           status: "ACCEPTED",
+         },
 
-          select: {
-            id: true,
+         select: {
+           id: true,
 
-            requester: {
-              select: {
-                id: true,
-                username: true,
-                profilePicture: true,
-              },
-            },
-          },
-        },
-      },
-    });
+           reciever: {
+             select: {
+               id: true,
+               username: true,
+               profilePicture: true,
+             },
+           },
+         },
+       },
 
-    if (!user) {
-      return res.status(404).json({
-        message: "User not found.",
-      });
-    }
+       recievedRequests: {
+         where: {
+           status: "ACCEPTED",
+         },
 
-    const sentFriends = user.sentRequests.map(
-      (request) => request.reciever
-    );
+         select: {
+           id: true,
 
-    const recievedFriends = user.recievedRequests.map(
-      (request) => request.requester
-    );
+           requester: {
+             select: {
+               id: true,
+               username: true,
+               profilePicture: true,
+             },
+           },
+         },
+       },
 
-    const friends = [...sentFriends, ...recievedFriends];
+       _count: {
+         select: {
+           posts: true,
+         },
+       },
+     },
+   });
 
-    const friendCount = friends.length;
+   if (!user) {
+     return res.status(404).json({
+       message: "User not found.",
+     });
+   }
 
-    return res.status(200).json({
-      message: "Profile fetched successfully.",
-      profile: {
-        id: user.id,
-        username: user.username,
-        profilePicture: user.profilePicture,
-        coverPicture: user.coverPicture,
-        dateofBirth: user.dateofBirth,
-        gender: user.gender,
-        createdAt: user.createdAt,
+   const sentFriends = user.sentRequests.map(
+     (request) => request.reciever
+   );
 
-        friendCount,
-        friends,
+   const recievedFriends = user.recievedRequests.map(
+     (request) => request.requester
+   );
 
-        postCount: user.posts.length,
-        posts: user.posts,
-      },
-    });
-  } catch (error) {
-    return res.status(500).json({
-      message: "Failed to fetch user profile.",
-      error: error.message,
-    });
-  }
+   const friends = [...sentFriends, ...recievedFriends];
+   const friendCount = friends.length;
+   const totalPostCount = user._count.posts;
+   const hasMore = page * limit < totalPostCount;
+
+   return res.status(200).json({
+     message: "Profile fetched successfully.",
+     profile: {
+       id: user.id,
+       username: user.username,
+       profilePicture: user.profilePicture,
+       coverPicture: user.coverPicture,
+       dateofBirth: user.dateofBirth,
+       gender: user.gender,
+       createdAt: user.createdAt,
+
+       friendCount,
+       friends,
+
+       postCount: totalPostCount,
+       posts: user.posts,
+       friendStatus,
+       pagination: {
+         page,
+         limit,
+         hasMore,
+         totalPosts: totalPostCount,
+       },
+     },
+   });
+ } catch (error) {
+   return res.status(500).json({
+     message: "Failed to fetch user profile.",
+     error: error.message,
+   });
+ }
 };
-
 
 exports.UpdateProfile = async (req, res) => {
   try {
