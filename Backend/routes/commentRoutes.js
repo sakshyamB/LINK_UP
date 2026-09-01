@@ -6,7 +6,7 @@ const commentRoutes = express.Router();
 
 commentRoutes.post("/create/:postId", authMiddleware, commentController.createComment);
 commentRoutes.get("/get/:postId", authMiddleware, commentController.getComments);
-commentRoutes.post("/update/:commentId", authMiddleware, commentController.updateComment);
+commentRoutes.put("/update/:commentId", authMiddleware, commentController.updateComment);
 commentRoutes.delete("/delete/:commentId", authMiddleware, commentController.deleteComment);
 
 module.exports = commentRoutes;

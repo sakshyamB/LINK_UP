@@ -8,6 +8,7 @@ const postRoutes = require("./routes/postRoutes");
 const commentRoutes = require("./routes/commentRoutes");
 const likeRoutes = require("./routes/likeRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use('/post', postRoutes);
 app.use('/comment', commentRoutes);
 app.use('/like', likeRoutes);
 app.use('/notification', notificationRoutes);
+app.use('/user', userRoutes);
 
 const PORT = process.env.PORT || 3001;
 
