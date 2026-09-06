@@ -1,4 +1,5 @@
 const prisma = require("../db/db");
+const { getPagination } = require("../utils/pagination");
 
 exports.sendFriendRequest = async (req, res) => {
   try {
@@ -89,21 +90,40 @@ exports.sendFriendRequest = async (req, res) => {
 
 exports.viewFriendRequest = async (req,res) => {
   try {
-  const requestlist = await prisma.friendRequest.findMany({
+  const { page, limit, skip } = getPagination(req.query);
+  const requestsWhere = {
     where:{
       recieverId: req.user.id,
       status: "PENDING",
-  },
-  include:{
-    requester:{
-      select:{
-         username: true,
-         profilePicture : true
-      },
     },
-  },}
-)
-return res.status(200).json({message: "Friend request list fetched successfully", requestlist})
+  };
+  const [requestlist, totalRequests] = await Promise.all([
+    prisma.friendRequest.findMany({
+      ...requestsWhere,
+      include:{
+        requester:{
+          select:{
+             username: true,
+             profilePicture : true
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+    }),
+    prisma.friendRequest.count(requestsWhere),
+  ]);
+return res.status(200).json({
+  message: "Friend request list fetched successfully",
+  requestlist,
+  pagination: {
+    page,
+    limit,
+    hasMore: skip + requestlist.length < totalRequests,
+    total: totalRequests,
+  },
+})
 }
 catch(error) {
   return res.status(500).json({message: "Couldn't fetch friend request list", error: error.message})
@@ -229,5 +249,41 @@ exports.unfriend = async (req, res) => {
   }
 };
 
+exports.getFriendsList = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const { page, limit, skip } = getPagination(req.query);
+    const where = {
+      status: "ACCEPTED",
+      OR: [{ requesterId: userId }, { recieverId: userId }],
+    };
 
+    const [friends, totalFriends] = await Promise.all([
+      prisma.friendRequest.findMany({
+        where,
+        include: {
+          requester: {
+            select: { id: true, username: true, profilePicture: true },
+          },
+          reciever: {
+            select: { id: true, username: true, profilePicture: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.friendRequest.count({ where }),
+    ]);
 
+    return res.status(200).json({message: "Friends list fetched successfully.",friends,
+      pagination: {
+        page,
+        limit,
+        hasMore: skip + friends.length < totalFriends,
+        total: totalFriends,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({message: "Couldn't fetch friends list.",error: error.message});
+  }}    

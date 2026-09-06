@@ -1,18 +1,33 @@
+const prisma = require("../db/db");
+const { getPagination } = require("../utils/pagination");
+
 exports.getNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    const notifications = await prisma.notification.findMany({
-      where: {
-        recieverId: userId,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+    const { page, limit, skip } = getPagination(req.query);
+    const notificationsWhere = { recieverId: userId };
+    const [notifications, totalNotifications] = await Promise.all([
+      prisma.notification.findMany({
+        where: notificationsWhere,
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.notification.count({ where: notificationsWhere }),
+    ]);
 
     return res.status(200).json({
-      message: "Notifications fetched successfully.",notifications,
+      message: "Notifications fetched successfully.",
+      notifications,
+      pagination: {
+        page,
+        limit,
+        hasMore: skip + notifications.length < totalNotifications,
+        total: totalNotifications,
+      },
     });
 
   } catch (error) {

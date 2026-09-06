@@ -1,4 +1,5 @@
 const prisma = require("../db/db");
+const { getPagination } = require("../utils/pagination");
 
 exports.createPost = async (req, res) => {
   try {
@@ -23,29 +24,35 @@ exports.createPost = async (req, res) => {
 exports.getuserPost = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { page, limit, skip } = getPagination(req.query);
 
-    const userPost = await prisma.post.findMany({
-      where: {
-        authorId: req.params.id,
-      },
-      include: {
-        author: {
-          select: {
-            username: true,
-            profilePicture: true,
+    const [userPost, totalPosts] = await Promise.all([
+      prisma.post.findMany({
+        where: {
+          authorId: req.params.id,
+        },
+        include: {
+          author: {
+            select: {
+              username: true,
+              profilePicture: true,
+            },
+          },
+          _count: {
+            select: {
+              likes: true,
+              comments: true,
+            },
           },
         },
-        _count: {
-          select: {
-            likes: true,
-            comments: true,
-          },
+        orderBy: {
+          createdAt: "desc",
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        skip,
+        take: limit,
+      }),
+      prisma.post.count({ where: { authorId: req.params.id } }),
+    ]);
 
     const likedPosts = await prisma.like.findMany({
       where: {
@@ -71,6 +78,12 @@ exports.getuserPost = async (req, res) => {
     return res.status(200).json({
       message: "Users Post are fetched successfully",
       userPost: postsWithLikeStatus,
+      pagination: {
+        page,
+        limit,
+        hasMore: skip + userPost.length < totalPosts,
+        total: totalPosts,
+      },
     });
 
   } catch (error) {
@@ -84,26 +97,32 @@ exports.getuserPost = async (req, res) => {
 exports.getAllpost = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { page, limit, skip } = getPagination(req.query);
 
-    const AllPost = await prisma.post.findMany({
-      include: {
-        author: {
-          select: {
-            username: true,
-            profilePicture: true,
+    const [AllPost, totalPosts] = await Promise.all([
+      prisma.post.findMany({
+        include: {
+          author: {
+            select: {
+              username: true,
+              profilePicture: true,
+            },
+          },
+          _count: {
+            select: {
+              likes: true,
+              comments: true,
+            },
           },
         },
-        _count: {
-          select: {
-            likes: true,
-            comments: true,
-          },
+        orderBy: {
+          createdAt: "desc",
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        skip,
+        take: limit,
+      }),
+      prisma.post.count(),
+    ]);
 
     const likedPosts = await prisma.like.findMany({
       where: {
@@ -129,6 +148,12 @@ exports.getAllpost = async (req, res) => {
     return res.status(200).json({
       message: "All posts are fetched.",
       AllPost: postsWithLikeStatus,
+      pagination: {
+        page,
+        limit,
+        hasMore: skip + AllPost.length < totalPosts,
+        total: totalPosts,
+      },
     });
 
   } catch (error) {
@@ -282,13 +307,14 @@ exports.deletePost = async (req, res) => {
 exports.getFeed = async (req, res) => {
   try {
     const userId = req.user.id;
+    const { page, limit, skip } = getPagination(req.query);
 
     const friends = await prisma.friendRequest.findMany({
       where: {
         status: "ACCEPTED",
         OR: [
           { requesterId: userId },
-          { receiverId: userId },
+          { recieverId: userId },
         ],
       },
     });
@@ -301,31 +327,38 @@ exports.getFeed = async (req, res) => {
       }
     });
 
-    const feed = await prisma.post.findMany({
-      where: {
-        authorId: {
-          in: friendIds,
-        },
+    const feedWhere = {
+      authorId: {
+        in: friendIds,
       },
-      include: {
-        author: {
-          select: {
-            id: true,
-            username: true,
-            profilePicture: true,
+    };
+
+    const [feed, totalPosts] = await Promise.all([
+      prisma.post.findMany({
+        where: feedWhere,
+        include: {
+          author: {
+            select: {
+              id: true,
+              username: true,
+              profilePicture: true,
+            },
+          },
+          _count: {
+            select: {
+              likes: true,
+              comments: true,
+            },
           },
         },
-        _count: {
-          select: {
-            likes: true,
-            comments: true,
-          },
+        orderBy: {
+          createdAt: "desc",
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        skip,
+        take: limit,
+      }),
+      prisma.post.count({ where: feedWhere }),
+    ]);
 
     const likedPosts = await prisma.like.findMany({
       where: {
@@ -351,6 +384,12 @@ exports.getFeed = async (req, res) => {
     return res.status(200).json({
       message: "Feed fetched successfully",
       feed: feedWithLikeStatus,
+      pagination: {
+        page,
+        limit,
+        hasMore: skip + feed.length < totalPosts,
+        total: totalPosts,
+      },
     });
 
   } catch (error) {
@@ -360,4 +399,3 @@ exports.getFeed = async (req, res) => {
     });
   }
 };
-
