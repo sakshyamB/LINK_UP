@@ -1,4 +1,5 @@
 const prisma = require("../db/db");
+const { getPagination } = require("../utils/pagination");
 
 exports.createComment = async (req, res) => {
   try {
@@ -35,23 +36,37 @@ exports.createComment = async (req, res) => {
 
 exports.getComments = async (req, res) => {
   try {
-    const CommentsonPost = await prisma.comment.findMany({
-      where: {
-        postId: req.params.postId,
-      },
-      include: {
-        commenter: {
-       select: {
-        username: true,
-        profilePicture: true,
-      },
+    const { page, limit, skip } = getPagination(req.query);
+    const commentsWhere = { postId: req.params.postId };
+    const [CommentsonPost, totalComments] = await Promise.all([
+      prisma.comment.findMany({
+        where: commentsWhere,
+        include: {
+          commenter: {
+            select: {
+              username: true,
+              profilePicture: true,
+            },
+          },
         },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-   return res.status(200).json({message: "The comments on the post are fetched.",CommentsonPost,});
+        orderBy: {
+          createdAt: "desc",
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.comment.count({ where: commentsWhere }),
+    ]);
+   return res.status(200).json({
+     message: "The comments on the post are fetched.",
+     CommentsonPost,
+     pagination: {
+       page,
+       limit,
+       hasMore: skip + CommentsonPost.length < totalComments,
+       total: totalComments,
+     },
+   });
   } 
   catch (error) {
    return res.status(500).json({message: "Couldn't fetch comments on the post.",error: error.message});
