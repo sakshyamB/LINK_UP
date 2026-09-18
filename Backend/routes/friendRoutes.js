@@ -10,5 +10,6 @@ friendRoutes.post("/accept/:requestId", authMiddleware, friendController.acceptF
 friendRoutes.post("/reject/:requestId", authMiddleware, friendController.rejectFriendRequest);
 friendRoutes.delete("/cancel/:requestId", authMiddleware, friendController.cancelrequest);
 friendRoutes.delete("/unfriend/:requestId", authMiddleware, friendController.unfriend);
+friendRoutes.get('/list/:userId', authMiddleware, friendController.getFriendsList);
 
 module.exports = friendRoutes;

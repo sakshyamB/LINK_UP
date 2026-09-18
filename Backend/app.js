@@ -9,6 +9,7 @@ const commentRoutes = require("./routes/commentRoutes");
 const likeRoutes = require("./routes/likeRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const userRoutes = require("./routes/userRoutes");
+const friendRoutes = require("./routes/friendRoutes");
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/comment', commentRoutes);
 app.use('/like', likeRoutes);
 app.use('/notification', notificationRoutes);
 app.use('/user', userRoutes);
+app.use('/friend', friendRoutes);
 
 const PORT = process.env.PORT || 3001;
 
