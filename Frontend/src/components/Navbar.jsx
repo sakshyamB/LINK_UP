@@ -1,116 +1,123 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { CiSearch, CiBellOn } from "react-icons/ci";
-import { MdOutlineWbSunny } from "react-icons/md";
-import { FaHome } from "react-icons/fa";
-import { IoMoonOutline } from "react-icons/io5";
-import { CgProfile } from "react-icons/cg";
-import { IoIosMenu } from "react-icons/io";
-import { BsChatDots } from "react-icons/bs";
-import { HiVideoCamera } from "react-icons/hi2";
-import { useAuth } from "../context/AuthContext";
-import { api } from "../api";
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { FaSearch, FaBell, FaComments, FaUserCircle, FaSignOutAlt, FaUser, FaCog } from 'react-icons/fa';
 
-const Navbar = ({ setisleftsidebaropen, setisrightsidebaropen }) => {
-  const [darkMode, setDarkMode] = useState(false);
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState([]);
-  const { user } = useAuth();
+const Navbar = ({ user }) => {
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
-    const timer = setTimeout(async () => {
-      try {
-        const data = await api(`/users/search?q=${encodeURIComponent(query)}`);
-        setResults(data.users);
-      } catch {
-        setResults([]);
-      }
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [query]);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    navigate('/login');
+  };
 
   return (
-    <div className="w-full fixed z-50 top-0 left-0 bg-black h-16 flex items-center px-3 gap-2">
-      <Link to="/">
-        <h1 className="italic text-white text-2xl hidden sm:block">SocialApp</h1>
-      </Link>
-      <div className="flex items-center">
-        <Link to="/">
-          <FaHome className="text-white mx-2 text-2xl" />
-        </Link>
-        {darkMode ? (
-          <MdOutlineWbSunny
-            onClick={() => setDarkMode(false)}
-            className="text-white hidden sm:block text-2xl cursor-pointer"
-          />
-        ) : (
-          <IoMoonOutline
-            onClick={() => setDarkMode(true)}
-            className="text-white hidden sm:block text-2xl cursor-pointer"
-          />
-        )}
-        <IoIosMenu
-          onClick={() => setisleftsidebaropen?.((prev) => !prev)}
-          className="text-white mx-2 text-2xl sm:hidden cursor-pointer"
-        />
-      </div>
-      <div className="relative flex-1 flex items-center">
-        <CiSearch className="text-2xl hidden sm:block text-white mr-2" />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search people..."
-          className="w-[80%] sm:w-[60%] text-sm sm:text-base p-2 rounded-md text-white bg-transparent border border-white/40 outline-none"
-        />
-        {results.length > 0 && (
-          <div className="absolute top-12 left-0 sm:left-8 w-[80%] sm:w-[60%] bg-white rounded-lg shadow-lg overflow-hidden z-50">
-            {results.map((item) => (
-              <button
-                key={item.id}
-                className="w-full text-left px-3 py-2 hover:bg-gray-100 flex items-center gap-2"
-                onClick={() => {
-                  setQuery("");
-                  setResults([]);
-                  navigate(`/profile/${item.id}`);
-                }}
-              >
+    <header className="sticky top-0 z-50 bg-white border-b border-slate-200/80 shadow-sm px-4 py-2.5">
+      <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+        
+        <div className="flex items-center">
+          <Link to="/" className="text-2xl font-extrabold text-indigo-600 tracking-tight hover:opacity-90 transition">
+            LinkUp
+          </Link>
+        </div>
+
+        <div className="flex-1 max-w-md">
+          <form onSubmit={handleSearchSubmit} className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search..."
+              className="w-full bg-slate-100 text-slate-800 text-sm pl-10 pr-4 py-2 rounded-full border border-transparent focus:border-indigo-500 focus:bg-white focus:outline-none transition"
+            />
+            <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+          </form>
+        </div>
+
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          
+          <button 
+            aria-label="Notifications"
+            className="relative p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-full transition"
+          >
+            <FaBell className="text-lg" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white"></span>
+          </button>
+
+          <button 
+            aria-label="Messages"
+            className="relative p-2 text-slate-600 hover:text-indigo-600 hover:bg-slate-100 rounded-full transition"
+          >
+            <FaComments className="text-lg" />
+          </button>
+
+          <div className="relative">
+            <button
+              onClick={() => setIsProfileMenuOpen((prev) => !prev)}
+              className="flex items-center space-x-2 p-1 rounded-full hover:bg-slate-100 focus:outline-none transition"
+            >
+              {user?.profilePicture ? (
                 <img
-                  src={item.avatar || `https://ui-avatars.com/api/?name=${item.username}`}
-                  alt=""
-                  className="w-8 h-8 rounded-full object-cover"
+                  src={user.profilePicture}
+                  alt={user?.username || 'User'}
+                  className="w-8 h-8 rounded-full object-cover border border-slate-200"
                 />
-                <span>{item.username}</span>
-              </button>
-            ))}
+              ) : (
+                <FaUserCircle className="text-2xl text-slate-600" />
+              )}
+              <span className="hidden sm:inline-block text-xs font-semibold text-slate-700 max-w-[100px] truncate">
+                {user?.name || 'User'}
+              </span>
+            </button>
+
+            {isProfileMenuOpen && (
+              <div 
+                className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 py-1.5 z-50 animate-in fade-in slide-in-from-top-1"
+                onMouseLeave={() => setIsProfileMenuOpen(false)}
+              >
+                <Link
+                  to="/profile"
+                  onClick={() => setIsProfileMenuOpen(false)}
+                  className="flex items-center px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+                >
+                  <FaUser className="mr-2.5 text-slate-400" />
+                  View Profile
+                </Link>
+
+                <Link
+                  to="/settings"
+                  onClick={() => setIsProfileMenuOpen(false)}
+                  className="flex items-center px-4 py-2 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition"
+                >
+                  <FaCog className="mr-2.5 text-slate-400" />
+                  Settings
+                </Link>
+
+                <div className="border-t border-slate-100 my-1"></div>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center px-4 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 transition"
+                >
+                  <FaSignOutAlt className="mr-2.5 text-rose-500" />
+                  Log Out
+                </button>
+              </div>
+            )}
           </div>
-        )}
+
+        </div>
+
       </div>
-      <div className="flex items-center">
-        <Link to="/chat">
-          <BsChatDots className="text-white mx-2 text-xl" />
-        </Link>
-        <Link to="/friends">
-          <HiVideoCamera className="text-white mx-2 text-xl" />
-        </Link>
-        <CiBellOn
-          onClick={() => setisrightsidebaropen?.((prev) => !prev)}
-          className="text-white mx-2 text-2xl cursor-pointer"
-        />
-        <Link to={user ? `/profile/${user.id}` : "/login"}>
-          {user?.avatar ? (
-            <img src={user.avatar} alt="" className="w-8 h-8 rounded-full object-cover mx-2" />
-          ) : (
-            <CgProfile className="text-blue-400 text-2xl mx-2" />
-          )}
-        </Link>
-      </div>
-    </div>
+    </header>
   );
 };
 

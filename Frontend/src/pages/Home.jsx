@@ -1,10 +1,7 @@
-import Layout from "../components/Layout";
-import Feed from "../components/Feed";
+import Navbar from "../components/Navbar";
 
 const Home = () => (
-  <Layout>
-    <Feed />
-  </Layout>
+    <Navbar/>
 );
 
 export default Home;
