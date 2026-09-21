@@ -44,7 +44,7 @@ exports.PostSignup = [
   body("gender")
     .notEmpty()
     .withMessage("Please select your gender")
-    .isIn(["male", "female", "other"])
+    .isIn(["Male", "Female", "Others"])
     .withMessage("Invalid gender selected"),
 
   async (req, res) => {
@@ -74,8 +74,15 @@ exports.PostSignup = [
         password: hashedPassword,
       },
     });
+    const token = jwt.sign(
+      { id: newUser.id, username: newUser.username },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" },
+    );
+
     return res.status(201).json({
       message: "User created sucessfully.",
+      token,
       user: {
         id: newUser.id,
         username: newUser.username,
@@ -86,9 +93,13 @@ exports.PostSignup = [
 ];
 
 exports.PostLogin = [
-  body("email").notEmpty().message("Email is required"),
+  body("email")
+  .notEmpty()
+  .withMessage("Email is required"),
 
-  body("password").notEmpty().message("Password is required"),
+  body("password")
+  .notEmpty()
+  .withMessage("Password is required"),
 
   async (req, res) => {
     const { email, password } = req.body;
