@@ -34,6 +34,9 @@ const GoogleAuthButton = () => {
       // Status 200/201: Login or Signup complete
       if (res.data.token) {
         localStorage.setItem('token', res.data.token);
+        if (res.data.user) {
+          localStorage.setItem('user', JSON.stringify(res.data.user));
+        }
         setShowModal(false);
         navigate('/');
       }
