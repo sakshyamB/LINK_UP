@@ -5,7 +5,8 @@ import axios from 'axios';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 
 const Login = () => {
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -30,6 +31,9 @@ const Login = () => {
       if (res.data.token) {
         localStorage.setItem('token', res.data.token);
       }
+      if (res.data.user) {
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+      }
 
       setSuccess(res.data.message || 'Logged in successfully!');
       setEmail('');
@@ -53,7 +57,7 @@ const Login = () => {
       } else {
         setError('Server is not responding. Please try again later.');
       }
-    }  {
+    } finally {
       setIsLoading(false);
     }
   };

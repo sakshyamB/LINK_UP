@@ -4,6 +4,8 @@ import { FaSearch, FaBell, FaComments, FaUserCircle, FaSignOutAlt, FaUser, FaCog
 
 const Navbar = ({ user }) => {
   const navigate = useNavigate();
+  const storedUser = JSON.parse(localStorage.getItem('user') || 'null');
+  const currentUser = user || storedUser;
   const [searchQuery, setSearchQuery] = useState('');
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
@@ -16,6 +18,7 @@ const Navbar = ({ user }) => {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     navigate('/login');
   };
 
@@ -64,17 +67,17 @@ const Navbar = ({ user }) => {
               onClick={() => setIsProfileMenuOpen((prev) => !prev)}
               className="flex items-center space-x-2 p-1 rounded-full hover:bg-slate-100 focus:outline-none transition"
             >
-              {user?.profilePicture ? (
+              {currentUser?.profilePicture ? (
                 <img
-                  src={user.profilePicture}
-                  alt={user?.username || 'User'}
+                  src={currentUser.profilePicture}
+                  alt={currentUser?.username || 'User'}
                   className="w-8 h-8 rounded-full object-cover border border-slate-200"
                 />
               ) : (
                 <FaUserCircle className="text-2xl text-slate-600" />
               )}
               <span className="hidden sm:inline-block text-xs font-semibold text-slate-700 max-w-[100px] truncate">
-                {user?.name || 'User'}
+                {currentUser?.username || 'User'}
               </span>
             </button>
 
