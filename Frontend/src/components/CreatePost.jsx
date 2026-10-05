@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useState } from "react";
+import PostSuccessPopup from "./PostSuccessPopup";
 
 const CreatePost = ({ onCreated }) => {
   const [caption, setCaption] = useState("");
@@ -7,6 +8,7 @@ const CreatePost = ({ onCreated }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [uploadingfile, setuploadingfile] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -68,6 +70,7 @@ const CreatePost = ({ onCreated }) => {
       onCreated?.(response.data.post);
       setCaption("");
       setPreview(null);
+      setSuccessMessage("Post created successfully.");
     } catch (error) {
         setError(error.message || "Failed to create post.");
     } finally {
@@ -76,7 +79,8 @@ const CreatePost = ({ onCreated }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white w-full max-w-xl shadow-md rounded-xl p-4 mb-4 mx-auto">
+    <>
+      <form onSubmit={handleSubmit} className="bg-white w-full max-w-xl shadow-md rounded-xl p-4 mb-4 mx-auto">
         <h2 className="font-semibold mb-3">Create a Post</h2>
         <input
           type="text"
@@ -102,7 +106,14 @@ const CreatePost = ({ onCreated }) => {
         >
           {loading ? "Posting..." : "Post"}
         </button>
-    </form>
+      </form>
+      {successMessage && (
+        <PostSuccessPopup
+          message={successMessage}
+          onClose={() => setSuccessMessage("")}
+        />
+      )}
+    </>
   );
 };
 

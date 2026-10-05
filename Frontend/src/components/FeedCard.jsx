@@ -11,6 +11,7 @@ import {
   FaTimes,
   FaImage,
 } from "react-icons/fa";
+import PostSuccessPopup from "./PostSuccessPopup";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -46,7 +47,9 @@ const FeedCard = ({
   const [loadingMoreComments, setLoadingMoreComments] = useState(false);
   const [savingLike, setSavingLike] = useState(false);
   const [interactionError, setInteractionError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   const [isDeleted, setIsDeleted] = useState(false);
+  const [deleteSuccessPending, setDeleteSuccessPending] = useState(false);
   const [editingPost, setEditingPost] = useState(false);
   const [postDraft, setPostDraft] = useState(
     post?.content || post?.caption || "",
@@ -308,7 +311,8 @@ const FeedCard = ({
         getAuthConfig(),
       );
       setIsDeleted(true);
-      onPostDeleted?.(post.id);
+      setDeleteSuccessPending(true);
+      setSuccessMessage("Post deleted successfully.");
     } catch (error) {
       setInteractionError(
         error.response?.data?.error ||
@@ -346,6 +350,7 @@ const FeedCard = ({
       setEditingPost(false);
       setInteractionError("");
       setEditingImagePreview(nextImageUrl);
+      setSuccessMessage("Post updated successfully.");
     } catch (error) {
       setInteractionError(
         error.response?.data?.message || "Unable to update post.",
@@ -380,10 +385,26 @@ const FeedCard = ({
     setShowComments((shown) => !shown);
   };
 
-  if (isDeleted) return null;
+  const handleSuccessPopupClose = () => {
+    setSuccessMessage("");
+    if (deleteSuccessPending) {
+      setDeleteSuccessPending(false);
+      onPostDeleted?.(post.id);
+    }
+  };
+
+  if (isDeleted) {
+    return successMessage ? (
+      <PostSuccessPopup
+        message={successMessage}
+        onClose={handleSuccessPopupClose}
+      />
+    ) : null;
+  }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
+    <>
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-5">
       <div className="flex items-center justify-between px-4 pt-4 pb-3">
         <div className="flex items-center space-x-3">
           <Link
@@ -815,7 +836,14 @@ const FeedCard = ({
       {interactionError && !showComments && (
         <p className="px-4 pb-3 text-xs text-rose-600">{interactionError}</p>
       )}
-    </div>
+      </div>
+      {successMessage && (
+        <PostSuccessPopup
+          message={successMessage}
+          onClose={handleSuccessPopupClose}
+        />
+      )}
+    </>
   );
 };
 
