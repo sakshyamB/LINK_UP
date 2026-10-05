@@ -6,7 +6,7 @@ const CreatePost = ({ onCreated }) => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [uploadingImage, setuploadingImage] = useState(false);
+  const [uploadingfile, setuploadingfile] = useState(false);
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -20,12 +20,12 @@ const CreatePost = ({ onCreated }) => {
       setError(error.message || "Failed to upload image.");
     }
     finally {
-      setuploadingImage(false);
+      setuploadingfile(false);
     }
   };
 
   const uploadImageToCloudinary = async (file) => {
-    setuploadingImage(true);
+    setuploadingfile(true);
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
     if (!cloudName || !uploadPreset) {
@@ -87,17 +87,17 @@ const CreatePost = ({ onCreated }) => {
         />
         <input
           type="file"
-          accept="image/*"
+          accept="image/*, video/*"
           onChange={handleImageChange}
-          className="border px-2 py-1 rounded"
-          disabled={uploadingImage || loading}
+          className="block w-full min-w-0 max-w-full border px-2 py-1 text-xs rounded sm:max-w-fit sm:text-sm"
+          disabled={uploadingfile || loading}
         />
-        {uploadingImage && <p className="text-sm text-slate-500 mt-2">Uploading image...</p>}
+        {uploadingfile && <p className="text-sm text-slate-500 mt-2">Uploading image...</p>}
         {preview && <img src={preview} alt="preview" className="mt-3 max-h-56 rounded object-cover" />}
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
         <button
           type="submit"
-          disabled={loading || uploadingImage}
+          disabled={loading || uploadingfile}
           className="bg-blue-500 mt-3 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-60"
         >
           {loading ? "Posting..." : "Post"}

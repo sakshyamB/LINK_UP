@@ -11,9 +11,7 @@ const publicUser = (user) => ({
   id: user.id,
   username: user.username,
   email: user.email,
-  phone: user.phone,
-  bio: user.bio,
-  avatar: user.avatar,
+  profilePicture: user.profilePicture,
   coverPicture: user.coverPicture,
   createdAt: user.createdAt,
 });

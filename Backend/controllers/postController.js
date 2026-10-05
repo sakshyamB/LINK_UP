@@ -292,10 +292,16 @@ exports.deletePost = async (req, res) => {
       });
     }
 
-    const deletedpost = await prisma.post.delete({
-      where: {
-        id: req.params.postId,
-      },
+    const deletedpost = await prisma.$transaction(async (transaction) => {
+      await transaction.comment.deleteMany({
+        where: { postId: req.params.postId },
+      });
+      await transaction.like.deleteMany({
+        where: { postId: req.params.postId },
+      });
+      return transaction.post.delete({
+        where: { id: req.params.postId },
+      });
     });
 
     return res.status(200).json({

@@ -2,15 +2,14 @@ require("dotenv").config();
 const http = require("http");
 const { Server } = require("socket.io");
 const app = require("./app");
-const prisma = require("./lib/prisma");
+const prisma = require("./db/db");
 const { attachSockets } = require("./sockets");
-
 const PORT = process.env.PORT || 3001;
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   },
 });

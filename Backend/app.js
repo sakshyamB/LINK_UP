@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const prisma = require("./db/db");
 const dotenv = require("dotenv");
 const authRoutes = require("./routes/authRoutes");
 const profileRoutes = require("./routes/profileRoutes");
@@ -10,6 +9,7 @@ const likeRoutes = require("./routes/likeRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const userRoutes = require("./routes/userRoutes");
 const friendRoutes = require("./routes/friendRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 dotenv.config();
 
@@ -17,7 +17,7 @@ const app = express();
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: process.env.FRONTEND_URL,
   })
 );
 
@@ -30,20 +30,6 @@ app.use('/like', likeRoutes);
 app.use('/notification', notificationRoutes);
 app.use('/user', userRoutes);
 app.use('/friend', friendRoutes);
+app.use('/chat', chatRoutes);
 
-const PORT = process.env.PORT || 3001;
-
-const startServer = async () => {
-  try {
-    await prisma.$connect();
-    console.log("NeonDB connected successfully.");
-
-    app.listen(PORT, () => {
-      console.log(`Server running on port http://localhost:${PORT}`);
-    });
-  } catch (error) {
-    console.error("Couldn't connect to NeonDB:", error);
-  }
-};
-
-startServer();
+module.exports = app;

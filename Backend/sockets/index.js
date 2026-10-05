@@ -1,6 +1,12 @@
 const jwt = require("jsonwebtoken");
-const prisma = require("../lib/prisma");
-const { publicUser } = require("../lib/tokens");
+const prisma = require("../db/db");
+
+const chatUser = (user) => user && ({
+  id: user.id,
+  username: user.username,
+  avatar: user.profilePicture,
+  profilePicture: user.profilePicture,
+});
 
 const onlineUsers = new Map();
 
@@ -43,94 +49,95 @@ const attachSockets = (io) => {
 
   io.on("connection", (socket) => {
     addOnline(socket.userId, socket.id);
+    socket.emit("presence:sync", [...onlineUsers.keys()]);
     io.emit("presence:update", { userId: socket.userId, online: true });
 
-    socket.on("chat:join", (conversationId) => {
-      if (conversationId) socket.join(`conv:${conversationId}`);
+    socket.on("chat:join", async (conversationId, acknowledge) => {
+      if (!conversationId) {
+        acknowledge?.({ ok: false, error: "Conversation is required." });
+        return;
+      }
+
+      try {
+        const member = await prisma.conversationParticipants.findFirst({
+          where: { conversationId, userId: socket.userId },
+        });
+        if (!member) {
+          acknowledge?.({ ok: false, error: "You are not part of this conversation." });
+          return;
+        }
+
+        socket.join(`conv:${conversationId}`);
+        acknowledge?.({ ok: true });
+      } catch (error) {
+        acknowledge?.({ ok: false, error: "Unable to join conversation." });
+      }
     });
 
-    socket.on("chat:message", async ({ conversationId, content }) => {
+    socket.on("chat:message", async ({ conversationId, content, clientMessageId }, acknowledge) => {
       try {
         const text = (content || "").trim();
-        if (!conversationId || !text) return;
+        if (!conversationId || !text) {
+          acknowledge?.({ ok: false, error: "Message cannot be empty." });
+          return;
+        }
 
-        const member = await prisma.conversationParticipant.findUnique({
-          where: {
-            conversationId_userId: {
-              conversationId,
-              userId: socket.userId,
-            },
-          },
+        const participants = await prisma.conversationParticipants.findMany({
+          where: { conversationId },
+          select: { userId: true },
         });
-        if (!member) return;
+        const member = participants.find((participant) => participant.userId === socket.userId);
+        if (!member) {
+          acknowledge?.({ ok: false, error: "You are not part of this conversation." });
+          return;
+        }
+
+        const recipient = participants.find((participant) => participant.userId !== socket.userId);
+        if (!recipient) {
+          acknowledge?.({ ok: false, error: "Conversation recipient not found." });
+          return;
+        }
 
         const message = await prisma.message.create({
           data: {
             conversationId,
             senderId: socket.userId,
-            content: text,
+            recieverId: recipient.userId,
+            text,
           },
-          include: { sender: true },
+          include: {
+            sender: {
+              select: { id: true, username: true, profilePicture: true },
+            },
+          },
         });
 
-        await prisma.conversation.update({
+        prisma.conversation.update({
           where: { id: conversationId },
           data: { updatedAt: new Date() },
-        });
+        }).catch((error) => console.error("Failed to update conversation timestamp:", error.message));
 
         const payload = {
           id: message.id,
           conversationId,
-          content: message.content,
-          imageUrl: message.imageUrl,
-          createdAt: message.createdAt,
+          clientMessageId,
+          content: message.text,
+          createdAt: message.sendAt,
           senderId: message.senderId,
-          sender: publicUser(message.sender),
+          sender: chatUser(message.sender),
         };
 
         io.to(`conv:${conversationId}`).emit("chat:message", payload);
-
-        const participants = await prisma.conversationParticipant.findMany({
-          where: { conversationId },
-        });
+        acknowledge?.({ ok: true, message: payload });
         participants.forEach((p) => {
           if (p.userId !== socket.userId) {
             emitToUser(io, p.userId, "chat:notify", payload);
           }
         });
       } catch (error) {
+        acknowledge?.({ ok: false, error: "Failed to send message." });
         socket.emit("chat:error", { error: "Failed to send message." });
       }
-    });
-
-    socket.on("call:invite", async ({ toUserId, roomId }) => {
-      if (!toUserId || !roomId) return;
-      const caller = await prisma.user.findUnique({ where: { id: socket.userId } });
-      emitToUser(io, toUserId, "call:incoming", {
-        from: publicUser(caller),
-        roomId,
-      });
-    });
-
-    socket.on("call:join", (roomId) => {
-      if (!roomId) return;
-      socket.join(`call:${roomId}`);
-      socket.to(`call:${roomId}`).emit("call:peer-ready", { from: socket.userId });
-    });
-
-    socket.on("call:signal", ({ roomId, data }) => {
-      if (!roomId) return;
-      socket.to(`call:${roomId}`).emit("call:signal", {
-        from: socket.userId,
-        data,
-      });
-    });
-
-    socket.on("call:end", ({ roomId, toUserId }) => {
-      if (roomId) {
-        socket.to(`call:${roomId}`).emit("call:ended", { from: socket.userId });
-      }
-      if (toUserId) emitToUser(io, toUserId, "call:ended", { from: socket.userId });
     });
 
     socket.on("disconnect", () => {

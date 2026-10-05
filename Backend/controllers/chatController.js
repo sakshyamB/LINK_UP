@@ -1,13 +1,32 @@
-const prisma = require("../lib/prisma");
-const { publicUser } = require("../lib/tokens");
-const { uploadBuffer, isConfigured } = require("../lib/cloudinary");
+const prisma = require("../db/db");
+
+const chatUser = (user) => user && ({
+  id: user.id,
+  username: user.username,
+  avatar: user.profilePicture,
+  profilePicture: user.profilePicture,
+});
+
+const chatMessage = (message) => message && ({
+  id: message.id,
+  content: message.text,
+  createdAt: message.sendAt,
+  senderId: message.senderId,
+  sender: chatUser(message.sender),
+});
 
 const conversationInclude = {
-  participants: { include: { user: true } },
+  participants: {
+    include: {
+      user: { select: { id: true, username: true, profilePicture: true } },
+    },
+  },
   messages: {
-    orderBy: { createdAt: "desc" },
+    orderBy: { sendAt: "desc" },
     take: 1,
-    include: { sender: true },
+    include: {
+      sender: { select: { id: true, username: true, profilePicture: true } },
+    },
   },
 };
 
@@ -24,8 +43,8 @@ exports.listConversations = async (req, res) => {
         const other = conv.participants.find((p) => p.userId !== req.user.id)?.user;
         return {
           id: conv.id,
-          otherUser: other ? publicUser(other) : null,
-          lastMessage: conv.messages[0] || null,
+          otherUser: chatUser(other),
+          lastMessage: chatMessage(conv.messages[0]),
           updatedAt: conv.updatedAt,
         };
       }),
@@ -49,13 +68,23 @@ exports.getOrCreateConversation = async (req, res) => {
           { participants: { some: { userId: otherId } } },
         ],
       },
-      include: { participants: { include: { user: true } } },
+      include: {
+        participants: {
+          include: {
+            user: { select: { id: true, username: true, profilePicture: true } },
+          },
+        },
+      },
     });
 
     if (existing) {
       const other = existing.participants.find((p) => p.userId !== req.user.id)?.user;
-      return res.json({ conversationId: existing.id, otherUser: publicUser(other) });
+      if (!other) return res.status(404).json({ error: "Conversation user not found." });
+      return res.json({ conversationId: existing.id, otherUser: chatUser(other) });
     }
+
+    const otherUser = await prisma.user.findUnique({ where: { id: otherId } });
+    if (!otherUser) return res.status(404).json({ error: "User not found." });
 
     const created = await prisma.conversation.create({
       data: {
@@ -63,10 +92,15 @@ exports.getOrCreateConversation = async (req, res) => {
           create: [{ userId: req.user.id }, { userId: otherId }],
         },
       },
-      include: { participants: { include: { user: true } } },
+      include: {
+        participants: {
+          include: {
+            user: { select: { id: true, username: true, profilePicture: true } },
+          },
+        },
+      },
     });
-    const other = created.participants.find((p) => p.userId !== req.user.id)?.user;
-    return res.status(201).json({ conversationId: created.id, otherUser: publicUser(other) });
+    return res.status(201).json({ conversationId: created.id, otherUser: chatUser(otherUser) });
   } catch (error) {
     return res.status(500).json({ error: "Failed to start conversation." });
   }
@@ -74,32 +108,22 @@ exports.getOrCreateConversation = async (req, res) => {
 
 exports.getMessages = async (req, res) => {
   try {
-    const member = await prisma.conversationParticipant.findUnique({
-      where: {
-        conversationId_userId: {
-          conversationId: req.params.id,
-          userId: req.user.id,
-        },
-      },
+    const member = await prisma.conversationParticipants.findFirst({
+      where: { conversationId: req.params.id, userId: req.user.id },
     });
     if (!member) return res.status(403).json({ error: "Not in this conversation." });
 
     const messages = await prisma.message.findMany({
       where: { conversationId: req.params.id },
-      include: { sender: true },
-      orderBy: { createdAt: "asc" },
+      include: {
+        sender: { select: { id: true, username: true, profilePicture: true } },
+      },
+      orderBy: { sendAt: "desc" },
       take: 200,
     });
 
     return res.json({
-      messages: messages.map((msg) => ({
-        id: msg.id,
-        content: msg.content,
-        imageUrl: msg.imageUrl,
-        createdAt: msg.createdAt,
-        senderId: msg.senderId,
-        sender: publicUser(msg.sender),
-      })),
+      messages: messages.reverse().map(chatMessage),
     });
   } catch (error) {
     return res.status(500).json({ error: "Failed to load messages." });
@@ -109,36 +133,31 @@ exports.getMessages = async (req, res) => {
 exports.sendMessageHttp = async (req, res) => {
   try {
     const content = (req.body.content || "").trim();
-    let imageUrl = null;
-    if (req.file) {
-      if (!isConfigured()) {
-        return res.status(500).json({ error: "Cloudinary is not configured." });
-      }
-      const uploaded = await uploadBuffer(req.file.buffer, "socialapp/chat");
-      imageUrl = uploaded.secure_url;
-    }
-    if (!content && !imageUrl) {
+    if (req.file) return res.status(400).json({ error: "Image messages are not supported." });
+    if (!content) {
       return res.status(400).json({ error: "Message cannot be empty." });
     }
 
-    const member = await prisma.conversationParticipant.findUnique({
-      where: {
-        conversationId_userId: {
-          conversationId: req.params.id,
-          userId: req.user.id,
-        },
-      },
+    const member = await prisma.conversationParticipants.findFirst({
+      where: { conversationId: req.params.id, userId: req.user.id },
     });
     if (!member) return res.status(403).json({ error: "Not in this conversation." });
+
+    const recipient = await prisma.conversationParticipants.findFirst({
+      where: { conversationId: req.params.id, userId: { not: req.user.id } },
+    });
+    if (!recipient) return res.status(400).json({ error: "Conversation recipient not found." });
 
     const message = await prisma.message.create({
       data: {
         conversationId: req.params.id,
         senderId: req.user.id,
-        content: content || "",
-        imageUrl,
+        recieverId: recipient.userId,
+        text: content,
       },
-      include: { sender: true },
+      include: {
+        sender: { select: { id: true, username: true, profilePicture: true } },
+      },
     });
 
     await prisma.conversation.update({
@@ -146,16 +165,7 @@ exports.sendMessageHttp = async (req, res) => {
       data: { updatedAt: new Date() },
     });
 
-    return res.status(201).json({
-      message: {
-        id: message.id,
-        content: message.content,
-        imageUrl: message.imageUrl,
-        createdAt: message.createdAt,
-        senderId: message.senderId,
-        sender: publicUser(message.sender),
-      },
-    });
+    return res.status(201).json({ message: chatMessage(message) });
   } catch (error) {
     return res.status(500).json({ error: "Failed to send message." });
   }

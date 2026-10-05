@@ -5,6 +5,24 @@ const { OAuth2Client } = require("google-auth-library");
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const uniqueGoogleUsername = async (name, email) => {
+  const base = (name || email.split("@")[0])
+    .replace(/[^a-zA-Z ]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 20) || "Google User";
+  let username = base;
+  let suffix = 2;
+
+  while (await prisma.user.findUnique({ where: { username } })) {
+    const suffixText = ` ${suffix}`;
+    username = `${base.slice(0, 20 - suffixText.length)}${suffixText}`;
+    suffix += 1;
+  }
+
+  return username;
+};
+
 exports.PostGoogleAuth = [
   body("idToken")
     .notEmpty()
@@ -28,15 +46,28 @@ exports.PostGoogleAuth = [
 
     const { idToken, dateofBirth, gender } = req.body;
 
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.JWT_SECRET) {
+      return res.status(500).json({ error: "Google authentication is not configured on the server." });
+    }
+
+    let googleProfile;
     try {
       const ticket = await client.verifyIdToken({
         idToken,
         audience: process.env.GOOGLE_CLIENT_ID,
       });
 
-      const payload = ticket.getPayload();
-      const { sub: googleId, email, name, picture } = payload;
+      googleProfile = ticket.getPayload();
+      if (!googleProfile?.sub || !googleProfile?.email) {
+        return res.status(401).json({ error: "Google did not provide a verified account." });
+      }
+    } catch (err) {
+      console.error("Google token verification failed:", err.message);
+      return res.status(401).json({ error: "Google credential could not be verified. Please try again." });
+    }
 
+    const { sub: googleId, email, name, picture } = googleProfile;
+    try {
       let user = await prisma.user.findFirst({
         where: {
           OR: [{ googleId }, { email }],
@@ -47,7 +78,7 @@ exports.PostGoogleAuth = [
         if (!user.googleId) {
           user = await prisma.user.update({
             where: { id: user.id },
-            data: { googleId, avatar: user.avatar || picture },
+            data: { googleId, profilePicture: user.profilePicture || picture },
           });
         }
 
@@ -64,7 +95,7 @@ exports.PostGoogleAuth = [
             id: user.id,
             username: user.username,
             email: user.email,
-            avatar: user.avatar,
+            profilePicture: user.profilePicture,
           },
         });
       }
@@ -83,10 +114,10 @@ exports.PostGoogleAuth = [
       
       const newUser = await prisma.user.create({
         data: {
-          username: name,
+          username: await uniqueGoogleUsername(name, email),
           email,
           googleId,
-          avatar: picture,
+          profilePicture: picture,
           dateofBirth: new Date(dateofBirth),
           gender,
         },
@@ -105,12 +136,12 @@ exports.PostGoogleAuth = [
           id: newUser.id,
           username: newUser.username,
           email: newUser.email,
-          avatar: newUser.avatar,
+          profilePicture: newUser.profilePicture,
         },
       });
     } catch (err) {
-      console.error("Google Auth Error:", err);
-      return res.status(401).json({ error: "Invalid or expired Google Token" });
+      console.error("Google account authentication failed:", err);
+      return res.status(500).json({ error: "Google account could not be created or signed in. Please try again." });
     }
   },
 ];
