@@ -177,6 +177,7 @@ exports.UserProfile = async (req, res) => {
        gender: user.gender,
        createdAt: user.createdAt,
 
+      friendshipId: friendship?.id || null,
        friendCount,
        friends,
 

@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const chatController = require("../controllers/chatController");
-const { auth } = require("../middleware/auth");
+const auth = require("../middleware/authMiddleware");
 
 const upload = multer({
   storage: multer.memoryStorage(),

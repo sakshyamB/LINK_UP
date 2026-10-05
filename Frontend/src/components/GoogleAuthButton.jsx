@@ -7,7 +7,8 @@ import 'react-datepicker/dist/react-datepicker.css';
 
 const GoogleAuthButton = () => {
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
   const [error, setError] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -87,14 +88,18 @@ const GoogleAuthButton = () => {
 
       {/* Official Google Button Component */}
       <div className="w-full flex justify-center">
-        <GoogleLogin
-          onSuccess={handleGoogleSuccess}
-          onError={handleGoogleError}
-          theme="outline"
-          shape="pill"
-          width="350px"
-          text="continue_with"
-        />
+        {GOOGLE_CLIENT_ID ? (
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="outline"
+            shape="pill"
+            width="350px"
+            text="continue_with"
+          />
+        ) : (
+          <p className="text-xs text-slate-500">Google sign-in is not configured for this app.</p>
+        )}
       </div>
 
       {/* Profile Completion Modal for Google Sign-Ups */}

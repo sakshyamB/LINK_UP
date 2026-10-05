@@ -103,6 +103,7 @@ exports.viewFriendRequest = async (req,res) => {
       include:{
         requester:{
           select:{
+             id: true,
              username: true,
              profilePicture : true
           },

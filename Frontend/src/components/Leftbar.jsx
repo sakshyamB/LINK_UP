@@ -1,17 +1,9 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link} from 'react-router-dom';
 import {FaCog,FaComments,FaHome,FaSignOutAlt,FaUser,FaUserFriends,FaUserCircle,} from 'react-icons/fa';
 
-const Leftbar = () => {
+const Leftbar = ({setlogoutpopup}) => {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
-
-  const navigate = useNavigate();
-
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    navigate('/login');
-  }
 
   return (
     <aside className="min-h-[calc(100vh-73px)] w-full max-w-xs border-r border-slate-200 bg-white px-4 py-6 shadow-sm">
@@ -47,7 +39,7 @@ const Leftbar = () => {
       </nav>
 
       <button
-        onClick={handleLogout}
+        onClick={() => setlogoutpopup?.(true)}
         className="mt-8 flex w-full items-center gap-3 rounded-xl border-t border-slate-100 px-4 py-4 text-sm font-semibold text-rose-600 transition hover:bg-rose-50"
       >
         <FaSignOutAlt className="text-rose-500" />
